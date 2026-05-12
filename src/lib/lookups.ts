@@ -1,8 +1,11 @@
 import { CLIENTS, STATUSES, USERS } from '@/data/mock';
+import { useOpportunitiesStore } from '@/stores/useOpportunitiesStore';
 import type { Client, Status, StatusId, User } from '@/types';
 
 export function findClient(id: string): Client | undefined {
-  return CLIENTS.find((c) => c.id === id);
+  const known = CLIENTS.find((c) => c.id === id);
+  if (known) return known;
+  return useOpportunitiesStore.getState().sheetClients.find((c) => c.id === id);
 }
 
 export function findUser(id: string): User | undefined {

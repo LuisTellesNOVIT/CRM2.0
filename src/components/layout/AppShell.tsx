@@ -5,7 +5,8 @@ import { CommandPalette } from '@/components/command/CommandPalette';
 import { LeadDrawer } from '@/features/opportunities/LeadDrawer';
 import { useApplyTheme } from '@/lib/useApplyTheme';
 import { useMediaQuery } from '@/lib/useMediaQuery';
-import { useUIStore } from '@/stores';
+import { useOpportunitiesStore, useUIStore } from '@/stores';
+import { SHEET_ID } from '@/config';
 
 export function AppShell() {
   useApplyTheme();
@@ -14,6 +15,13 @@ export function AppShell() {
   const closeCmdk = useUIStore((s) => s.closeCmdk);
   const sidebarOpen = useUIStore((s) => s.sidebarOpen);
   const closeSidebar = useUIStore((s) => s.closeSidebar);
+  const hydrateFromSheet = useOpportunitiesStore((s) => s.hydrateFromSheet);
+
+  useEffect(() => {
+    hydrateFromSheet(SHEET_ID).catch(() => {
+      // Errors are surfaced via store.error and the TopBar
+    });
+  }, [hydrateFromSheet]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

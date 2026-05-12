@@ -20,6 +20,8 @@ import { KanbanColumn } from './KanbanColumn';
 export function Kanban() {
   const opportunities = useOpportunitiesStore((s) => s.opportunities);
   const setStatus = useOpportunitiesStore((s) => s.setStatus);
+  const source = useOpportunitiesStore((s) => s.source);
+  const readonly = source === 'sheets';
   const [draggingId, setDraggingId] = useState<string | null>(null);
 
   const sensors = useSensors(
@@ -31,12 +33,13 @@ export function Kanban() {
   const draggingOpp = draggingId ? opportunities.find((o) => o.id === draggingId) : null;
 
   const onDragStart = (e: DragStartEvent) => {
+    if (readonly) return;
     setDraggingId(String(e.active.id));
   };
 
   const onDragEnd = (e: DragEndEvent) => {
     setDraggingId(null);
-    if (!e.over) return;
+    if (readonly || !e.over) return;
     const newStatus = String(e.over.id) as StatusId;
     const opp = opportunities.find((o) => o.id === String(e.active.id));
     if (!opp || opp.status === newStatus) return;
@@ -47,7 +50,11 @@ export function Kanban() {
     <>
       <TopBar
         title="Kanban comercial"
-        subtitle="Arrastra tarjetas para mover oportunidades entre estados."
+        subtitle={
+          readonly
+            ? 'Vista en vivo desde Google Sheets · solo lectura.'
+            : 'Arrastra tarjetas para mover oportunidades entre estados.'
+        }
         right={
           <Button icon="plus" variant="primary">
             Nueva
@@ -78,6 +85,7 @@ export function Kanban() {
                   status={col}
                   opps={list}
                   draggingId={draggingId}
+                  readonly={readonly}
                 />
               );
             })}

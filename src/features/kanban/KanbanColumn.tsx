@@ -9,9 +9,10 @@ interface KanbanColumnProps {
   status: Status;
   opps: Opportunity[];
   draggingId: string | null;
+  readonly?: boolean;
 }
 
-export function KanbanColumn({ status, opps, draggingId }: KanbanColumnProps) {
+export function KanbanColumn({ status, opps, draggingId, readonly }: KanbanColumnProps) {
   const currency = useUIStore((s) => s.currency);
   const { isOver, setNodeRef } = useDroppable({ id: status.id });
   const total = opps.reduce((s, o) => s + calc.pipelineValue(o), 0);
@@ -71,7 +72,12 @@ export function KanbanColumn({ status, opps, draggingId }: KanbanColumnProps) {
       </div>
       <div style={{ minHeight: 60 }}>
         {opps.map((o) => (
-          <KanbanCard key={o.id} opp={o} ghost={draggingId === o.id} />
+          <KanbanCard
+            key={o.id}
+            opp={o}
+            ghost={draggingId === o.id}
+            readonly={readonly}
+          />
         ))}
         {opps.length === 0 && (
           <div

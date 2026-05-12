@@ -13,13 +13,15 @@ import type { Opportunity } from '@/types';
 interface KanbanCardProps {
   opp: Opportunity;
   ghost?: boolean;
+  readonly?: boolean;
 }
 
-export function KanbanCard({ opp, ghost }: KanbanCardProps) {
+export function KanbanCard({ opp, ghost, readonly }: KanbanCardProps) {
   const navigate = useNavigate();
   const currency = useUIStore((s) => s.currency);
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: opp.id,
+    disabled: readonly,
   });
 
   const c = findClient(opp.client_id);
@@ -39,7 +41,7 @@ export function KanbanCard({ opp, ghost }: KanbanCardProps) {
     borderRadius: 10,
     padding: 12,
     marginBottom: 8,
-    cursor: 'grab',
+    cursor: readonly ? 'pointer' : 'grab',
     opacity: isDragging || ghost ? 0.4 : 1,
     transition: 'border-color 0.15s, box-shadow 0.15s, opacity 0.1s',
     boxShadow: '0 1px 0 rgba(15,17,21,0.02)',
