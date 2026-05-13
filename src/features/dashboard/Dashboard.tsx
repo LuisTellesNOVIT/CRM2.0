@@ -1,18 +1,26 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '@/components/icons/Icon';
 import { TopBar } from '@/components/layout/TopBar';
 import { Badge, Card } from '@/components/ui';
 import { calc } from '@/lib/calc';
-import { findClient } from '@/lib/lookups';
+import { findClient, findStatus } from '@/lib/lookups';
 import { formatMoney } from '@/lib/money';
 import { generateRecommendations } from '@/lib/recommendations';
 import { useAuthStore, useOpportunitiesStore, useUIStore } from '@/stores';
+import type { Opportunity, StatusId } from '@/types';
 import { Donut } from './Donut';
 import { Funnel } from './Funnel';
 import { KpiCard } from './KpiCard';
+import { OpportunityListModal } from './OpportunityListModal';
 import { ProjectionChart } from './ProjectionChart';
 import { RecommendationItem } from './RecommendationItem';
+
+interface DrillDown {
+  title: string;
+  description?: string;
+  opportunities: Opportunity[];
+}
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -20,6 +28,24 @@ export function Dashboard() {
   const currency = useUIStore((s) => s.currency);
   const currentUser = useAuthStore((s) => s.currentUser);
   const firstName = currentUser?.name.split(' ')[0] ?? '';
+  const [drill, setDrill] = useState<DrillDown | null>(null);
+
+  const openDrill = (
+    title: string,
+    list: Opportunity[],
+    description?: string,
+  ) => setDrill({ title, description, opportunities: list });
+  const closeDrill = () => setDrill(null);
+
+  const openStage = (status: StatusId) => {
+    const s = findStatus(status);
+    const list = opportunities.filter((o) => o.status === status);
+    openDrill(
+      `Etapa: ${s?.label ?? status}`,
+      list,
+      `${list.length} oportunidades en esta etapa del pipeline.`,
+    );
+  };
 
   const active = opportunities.filter((o) => o.status !== 'lost');
   const won = opportunities.filter((o) => o.status === 'won' || o.status === 'signing');
@@ -84,6 +110,13 @@ export function Dashboard() {
             spark={[60, 55, 72, 68, 78, 82, 90, 88, 95]}
             sparkColor="var(--accent)"
             delta={12.4}
+            onClick={() =>
+              openDrill(
+                'Pipeline activo',
+                active,
+                'Oportunidades activas (excluye perdidas). Pipeline = setup + 12 meses.',
+              )
+            }
           />
           <KpiCard
             label="Ganado"
@@ -91,18 +124,35 @@ export function Dashboard() {
             hint={`${won.length} cuentas`}
             accent="var(--success)"
             delta={8.2}
+            onClick={() =>
+              openDrill(
+                'Ganado',
+                won,
+                'Oportunidades ganadas o en firma de contrato.',
+              )
+            }
           />
           <KpiCard
             label="ARR 12m"
             value={formatMoney(arrWon, currency, true)}
             hint="MRR × 12"
             accent="var(--violet)"
+            onClick={() =>
+              openDrill('ARR 12m', won, 'Ingreso recurrente anual de las cuentas ganadas (mensualidad × 12).')
+            }
           />
           <KpiCard
             label="LTV 36m"
             value={formatMoney(ltv36Won, currency, true)}
             hint="Setup + 36m"
             accent="var(--info)"
+            onClick={() =>
+              openDrill(
+                'LTV 36m',
+                won,
+                'Lifetime value a 36 meses: setup + mensualidad × 36.',
+              )
+            }
           />
         </div>
 
@@ -113,24 +163,52 @@ export function Dashboard() {
             value={formatMoney(proposalValue, currency, true)}
             hint={`${inProposal.length} en juego`}
             accent="var(--warning)"
+            onClick={() =>
+              openDrill(
+                'En propuesta',
+                inProposal,
+                'Oportunidades en estado Propuesta o Negociación.',
+              )
+            }
           />
           <KpiCard
             label="Tasa de cierre"
             value={`${closeRate.toFixed(1)}%`}
             hint={`${won.length} de ${decided.length} decididas`}
             accent="var(--success)"
+            onClick={() =>
+              openDrill(
+                'Tasa de cierre',
+                decided,
+                'Decididas (ganadas, en firma o perdidas). La tasa considera ganadas + firma sobre decididas.',
+              )
+            }
           />
           <KpiCard
             label="Perdidas"
             value={formatMoney(lostValue, currency, true)}
             hint={`${lost.length} cuentas`}
             accent="var(--danger)"
+            onClick={() =>
+              openDrill(
+                'Perdidas',
+                lost,
+                'Oportunidades marcadas como perdidas.',
+              )
+            }
           />
           <KpiCard
             label="Total opp."
             value={opportunities.length}
             hint={`${active.length} activas`}
             accent="var(--text-2)"
+            onClick={() =>
+              openDrill(
+                'Todas las oportunidades',
+                opportunities,
+                'Cartera completa incluyendo ganadas y perdidas.',
+              )
+            }
           />
         </div>
 
@@ -162,7 +240,7 @@ export function Dashboard() {
                 Ver Kanban <Icon name="arrow_right" size={11} />
               </button>
             </div>
-            <Funnel opps={opportunities} />
+            <Funnel opps={opportunities} onStageClick={openStage} />
           </Card>
 
           <Card padding={0}>
@@ -442,6 +520,14 @@ export function Dashboard() {
           </Card>
         </div>
       </div>
+
+      <OpportunityListModal
+        open={!!drill}
+        title={drill?.title ?? ''}
+        description={drill?.description}
+        opportunities={drill?.opportunities ?? []}
+        onClose={closeDrill}
+      />
     </>
   );
 }

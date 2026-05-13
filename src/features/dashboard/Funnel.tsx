@@ -14,7 +14,12 @@ const STAGES: StatusId[] = [
   'won',
 ];
 
-export function Funnel({ opps }: { opps: Opportunity[] }) {
+interface FunnelProps {
+  opps: Opportunity[];
+  onStageClick?: (status: StatusId) => void;
+}
+
+export function Funnel({ opps, onStageClick }: FunnelProps) {
   const currency = useUIStore((s) => s.currency);
   const data = STAGES.map((s) => {
     const list = opps.filter((o) => o.status === s);
@@ -27,15 +32,43 @@ export function Funnel({ opps }: { opps: Opportunity[] }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {data.map((d) => {
         const pct = (d.value / maxVal) * 100;
+        const clickable = !!onStageClick;
         return (
           <div
             key={d.status.id}
+            onClick={() => clickable && onStageClick(d.status.id)}
+            role={clickable ? 'button' : undefined}
+            tabIndex={clickable ? 0 : undefined}
+            onKeyDown={
+              clickable
+                ? (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      onStageClick(d.status.id);
+                    }
+                  }
+                : undefined
+            }
             style={{
               display: 'grid',
               gridTemplateColumns: '140px 1fr 130px',
               alignItems: 'center',
               gap: 12,
+              cursor: clickable ? 'pointer' : 'default',
+              padding: '4px 0',
+              borderRadius: 6,
+              transition: 'background 0.15s',
             }}
+            onMouseEnter={
+              clickable
+                ? (e) => (e.currentTarget.style.background = 'var(--surface-2)')
+                : undefined
+            }
+            onMouseLeave={
+              clickable
+                ? (e) => (e.currentTarget.style.background = 'transparent')
+                : undefined
+            }
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span

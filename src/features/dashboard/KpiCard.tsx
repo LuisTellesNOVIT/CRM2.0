@@ -12,6 +12,7 @@ interface KpiCardProps {
   sparkColor?: string;
   icon?: IconName;
   large?: boolean;
+  onClick?: () => void;
 }
 
 export function KpiCard({
@@ -25,9 +26,39 @@ export function KpiCard({
   sparkColor,
   icon,
   large,
+  onClick,
 }: KpiCardProps) {
+  const clickable = !!onClick;
   return (
     <div
+      onClick={onClick}
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onKeyDown={
+        clickable
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick?.();
+              }
+            }
+          : undefined
+      }
+      onMouseEnter={
+        clickable
+          ? (e) => {
+              (e.currentTarget as HTMLDivElement).style.borderColor =
+                'var(--border-strong)';
+            }
+          : undefined
+      }
+      onMouseLeave={
+        clickable
+          ? (e) => {
+              (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)';
+            }
+          : undefined
+      }
       style={{
         background: 'var(--surface)',
         border: '1px solid var(--border)',
@@ -38,6 +69,8 @@ export function KpiCard({
         gap: 6,
         position: 'relative',
         minHeight: large ? 140 : 112,
+        cursor: clickable ? 'pointer' : 'default',
+        transition: 'border-color 0.15s',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>

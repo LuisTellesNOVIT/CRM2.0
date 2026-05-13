@@ -1,4 +1,6 @@
 import { CLIENTS } from './mock';
+import { SHEET_BASE_CURRENCY } from '@/config';
+import { FX_PEN_USD } from '@/lib/money';
 import type { Client, Company, Opportunity, StatusId } from '@/types';
 
 const STATUS_MAP: Record<string, StatusId> = {
@@ -68,7 +70,7 @@ function clientIdFromName(name: string): string {
   return `c-${normalize(name).replace(/\s+/g, '-').slice(0, 30)}`;
 }
 
-function clientFromName(name: string, idx: number): Client {
+function clientFromName(name: string): Client {
   const known = CLIENTS.find((c) => normalize(c.name) === normalize(name));
   if (known) return known;
   return {
@@ -126,6 +128,10 @@ export async function fetchSheetOpportunities(sheetId: string): Promise<SheetSyn
 
   const clientsMap = new Map<string, Client>();
   const opportunities: Opportunity[] = [];
+  // Si el sheet está en USD, multiplicamos para almacenar internamente en PEN
+  // (moneda base del modelo). El toggle PEN/USD divide a USD al renderizar.
+  const toBasePen = (amount: number) =>
+    SHEET_BASE_CURRENCY === 'USD' ? amount * FX_PEN_USD : amount;
 
   json.table.rows.forEach((row, idx) => {
     const cliente = cellString(row, clienteIdx);
@@ -142,7 +148,7 @@ export async function fetchSheetOpportunities(sheetId: string): Promise<SheetSyn
       ('lead' as StatusId);
     const company = COMPANY_MAP[normalize(empresaRaw)] || 'NOVIT';
 
-    const client = clientFromName(cliente, idx);
+    const client = clientFromName(cliente);
     if (!clientsMap.has(client.id)) clientsMap.set(client.id, client);
 
     opportunities.push({
@@ -151,8 +157,8 @@ export async function fetchSheetOpportunities(sheetId: string): Promise<SheetSyn
       project: proyecto,
       company,
       status,
-      setup: cellNumber(row, setupIdx),
-      monthly: cellNumber(row, monthlyIdx),
+      setup: toBasePen(cellNumber(row, setupIdx)),
+      monthly: toBasePen(cellNumber(row, monthlyIdx)),
       owner_id: cellString(row, ownerIdx) || '',
       source: '',
       created: '',
