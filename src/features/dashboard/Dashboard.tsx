@@ -83,6 +83,22 @@ export function Dashboard() {
       .map(([id, v]) => ({ client: findClient(id), value: v }));
   }, [active]);
 
+  const uniqueClientIds = useMemo(
+    () => Array.from(new Set(active.map((o) => o.client_id))),
+    [active],
+  );
+  const topClient = topClients[0];
+  const avgTicket = uniqueClientIds.length
+    ? pipelineActive / uniqueClientIds.length
+    : 0;
+  const topClientOpps = useMemo(
+    () =>
+      topClient?.client
+        ? active.filter((o) => o.client_id === topClient.client!.id)
+        : [],
+    [active, topClient],
+  );
+
   const recs = useMemo(() => generateRecommendations(opportunities), [opportunities]);
 
   return (
@@ -207,6 +223,58 @@ export function Dashboard() {
                 'Todas las oportunidades',
                 opportunities,
                 'Cartera completa incluyendo ganadas y perdidas.',
+              )
+            }
+          />
+        </div>
+
+        {/* Clients KPIs */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+          <KpiCard
+            label="Clientes únicos"
+            value={uniqueClientIds.length}
+            hint={`${active.length} oportunidades activas`}
+            accent="var(--accent)"
+            onClick={() =>
+              openDrill(
+                'Clientes con pipeline activo',
+                active,
+                `${uniqueClientIds.length} cuentas distintas concentran ${active.length} oportunidades activas (excluye perdidas).`,
+              )
+            }
+          />
+          <KpiCard
+            label="Top cliente"
+            value={topClient?.client?.name ?? '—'}
+            hint={
+              topClient ? formatMoney(topClient.value, currency, true) : 'sin datos'
+            }
+            accent="var(--warning)"
+            onClick={() =>
+              topClient?.client &&
+              openDrill(
+                `Pipeline de ${topClient.client.name}`,
+                topClientOpps,
+                `${topClientOpps.length} oportunidades activas. Total ${formatMoney(
+                  topClient.value,
+                  currency,
+                  true,
+                )}.`,
+              )
+            }
+          />
+          <KpiCard
+            label="Ticket promedio"
+            value={formatMoney(avgTicket, currency, true)}
+            hint="por cliente · solo activos"
+            accent="var(--violet)"
+            onClick={() =>
+              openDrill(
+                'Ticket promedio por cliente',
+                active,
+                `Pipeline activo ${formatMoney(pipelineActive, currency, true)} ÷ ${
+                  uniqueClientIds.length
+                } clientes = ${formatMoney(avgTicket, currency, true)} promedio.`,
               )
             }
           />
@@ -429,7 +497,7 @@ export function Dashboard() {
                 display: 'flex',
                 alignItems: 'baseline',
                 justifyContent: 'space-between',
-                marginBottom: 14,
+                marginBottom: 4,
               }}
             >
               <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>
@@ -439,6 +507,15 @@ export function Dashboard() {
                 Ver todos <Icon name="arrow_right" size={11} />
               </button>
             </div>
+            <div
+              style={{
+                fontSize: 11.5,
+                color: 'var(--text-3)',
+                marginBottom: 10,
+              }}
+            >
+              Excluye oportunidades perdidas. Click para ver detalle.
+            </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {topClients.map((c, i) => {
                 const top = topClients[0].value || 1;
@@ -446,9 +523,17 @@ export function Dashboard() {
                 return (
                   <button
                     key={c.client?.id ?? i}
-                    onClick={() =>
-                      c.client && navigate(`/clients?id=${c.client.id}`)
-                    }
+                    onClick={() => {
+                      if (!c.client) return;
+                      const clientOpps = active.filter(
+                        (o) => o.client_id === c.client!.id,
+                      );
+                      openDrill(
+                        `Pipeline de ${c.client.name}`,
+                        clientOpps,
+                        `${clientOpps.length} oportunidades activas (excluye perdidas). Click en una fila para abrir el detalle.`,
+                      );
+                    }}
                     style={{
                       background: 'transparent',
                       border: 'none',
